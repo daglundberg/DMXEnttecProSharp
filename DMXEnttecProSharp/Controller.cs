@@ -64,6 +64,7 @@ namespace DMXEnttecProSharp
 
 			// Create a new SerialPort object with default settings.
 			_serialPort = new SerialPort(port, baudrate);
+			_serialPort.Handshake = Handshake.XOnXOff;
 
 			// Set the read/write timeouts
 			_serialPort.ReadTimeout = timeout;
@@ -73,7 +74,7 @@ namespace DMXEnttecProSharp
 
 			Channels = new byte[DmxSize];
 			_signalStart = new byte[] { 0x7E };
-			_signalEnd = new byte[] { 0x7E };
+			_signalEnd = new byte[] { 0xE7 };
 		}
 
 		public void SetChannel(int channel, byte value)
