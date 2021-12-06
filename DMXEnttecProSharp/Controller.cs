@@ -4,23 +4,28 @@ using System.IO.Ports;
 
 namespace DMXEnttecProSharp
 {
+	public struct Color
+	{
+		public byte Red;
+		public byte Green;
+		public byte Blue;
+		public byte White;
+	}
+
     /// <summary>
     /// Controller maintains a state and interface for interacting with the Enttec
 	/// DMX USB Pro.
 	/// 
 	/// Key methods include:
-	///   `set_channel(channel, value)` - Sets channel to value
-	///   `submit()` - Send state to device
+	///   `SetChannel(channel, value)` - Sets channel to value
+	///   `Submit()` - Send state to device
 	///   `Close()` - Close serial connection to device
 	/// 
 	/// Convenience methods:
-	///   `clear_channels()` - Sets all channels to 0
-	///   `all_channels_on()` -  Sets all channels to 255
-	///   `set_all_channels(value)` - Sets all channels to value
+	///   `ClearChannels()` - Sets all channels to 0
+	///   `AllChannels_on()` -  Sets all channels to 255
+	///   `SetAllChannels(value)` - Sets all channels to value
 	/// 
-	/// Automatic submission of state changes configurable with `auto_submit`
-	/// argument.Usage of `submit_after` argument in state-changing methods takes
-	/// precedence over this default.
 	/// </summary>
 	public class Controller
 	{
@@ -29,8 +34,10 @@ namespace DMXEnttecProSharp
 		public int Baudrate;
 		public int Timeout;
 		public bool AutoSubmit;
-		public byte[] Channels;
-		private byte[] _signalStart, _signalEnd;
+		public byte[] Message;
+
+		const byte SignalStart = 0x7E;
+		const byte SignalEnd = 0xE7;
 
 		static SerialPort _serialPort;
 
@@ -40,7 +47,7 @@ namespace DMXEnttecProSharp
 		/// <param name="baudrate">Baudrate for serial connection.</param>
 		/// <param name="timeout">Serial connection timeout.</param>
 		/// <param name="autoSubmit">Enable or disable default automatic submission.</param>
-		public Controller(string port, int dmxSize = 512, int baudrate = 57600, int timeout = 500, bool autoSubmit = false)
+		public Controller(string port, int dmxSize = 48, int baudrate = 57600, int timeout = 1000, bool autoSubmit = false)
 		{
 			String[] PortNames = SerialPort.GetPortNames();
 
@@ -72,9 +79,26 @@ namespace DMXEnttecProSharp
 
 			_serialPort.Open();
 
-			Channels = new byte[DmxSize];
-			_signalStart = new byte[] { 0x7E };
-			_signalEnd = new byte[] { 0xE7 };
+			PrepareMessage();
+		}
+
+		private void PrepareMessage()
+		{
+			Message = new byte[DmxSize + 6];
+			Message[0] = SignalStart;
+			Message[1] = 6;
+			Message[2] = (byte)((DmxSize + 1) & 0xFF);
+			Message[3] = (byte)(((DmxSize + 1) >> 8) & 0xFF);
+			Message[4] = 0;
+			Message[Message.Length-1] = SignalEnd;
+		}
+
+		private Span<byte> Channels
+		{
+			get
+			{
+				return new Span<byte>(Message, 5, DmxSize);
+			}
 		}
 
 		public void SetChannel(int channel, byte value)
@@ -82,12 +106,22 @@ namespace DMXEnttecProSharp
 			Channels[channel] = value;
 		}
 
+		public void SetColor(int redChannel, Color color)
+		{
+			var span = Channels.Slice(redChannel, 4);
+
+			span[0] = color.Red;
+			span[1] = color.Green;
+			span[2] = color.Blue;
+			span[3] = color.White;
+		}
+
 		/// <summary>
 		/// Sets all channels to 0.
 		/// </summary>
 		public void ClearChannels()
 		{
-			Array.Clear(Channels, 0, Channels.Length);
+			Channels.Clear();			
 		}
 
 		/// <summary>
@@ -95,7 +129,7 @@ namespace DMXEnttecProSharp
 		/// </summary>
 		public void AllChannelsOn()
 		{
-			Array.Fill(Channels, (byte)255);
+			Channels.Fill(255);
 		}
 
 		/// <summary>
@@ -103,32 +137,23 @@ namespace DMXEnttecProSharp
 		/// </summary>
 		public void SetAllChannels(byte value)
 		{
-			Array.Fill(Channels, value);
+			Channels.Fill(value);
 		}
 
+		/// <summary>
+		/// Close the connection.
+		/// </summary>
 		public void Close()
 		{
 			_serialPort.Close();
 		}
 
+		/// <summary>
+		/// Send the message to the widget.
+		/// </summary>
 		public void Submit()
 		{
-			List<byte> message = new List<byte>();
-
-			message.AddRange(_signalStart);
-			message.AddRange(new byte[]
-			{
-				6,
-				(byte)((Channels.Length+1) & 0xFF),
-				(byte)(((Channels.Length+1) >> 8) & 0xFF),
-				0,
-			});
-
-			message.AddRange(Channels);
-			message.AddRange(_signalEnd);
-
-			_serialPort.Write(message.ToArray(), 0, message.Count);
+			_serialPort.Write(Message, 0, Message.Length);
 		}
-
 	}
 }

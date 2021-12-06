@@ -11,16 +11,15 @@ namespace Experiments
 			Controller controller = new Controller("COM3");
 			Console.WriteLine("Init success.");
 			controller.ClearChannels();
-			controller.SetChannel(2, 55);
-			controller.SetChannel(5, 55);
 			controller.Submit();
+
 			Console.WriteLine("First submit.");
 
 			byte val = 0;
 			int count = 0;
 			while (count < 5)
 			{
-				if (val < 255)
+				if (val < 200)
 					val++;
 				else
 				{
@@ -29,12 +28,10 @@ namespace Experiments
 					Console.WriteLine($"Count {count}.");
 				}
 
-				controller.SetChannel(2, val);
+				controller.SetColor(0, new Color() { Blue = val, Red = 255, Green = 0, White = 0 });
 
-				controller.SetChannel(5, val);
 				controller.Submit();
 				Thread.Sleep(5);
-
 			}
 
 			controller.ClearChannels();
