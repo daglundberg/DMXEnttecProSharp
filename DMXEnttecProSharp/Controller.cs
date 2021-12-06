@@ -42,6 +42,14 @@ namespace DMXEnttecProSharp
 		/// <param name="autoSubmit">Enable or disable default automatic submission.</param>
 		public Controller(string port, int dmxSize = 512, int baudrate = 57600, int timeout = 500, bool autoSubmit = false)
 		{
+			String[] PortNames = SerialPort.GetPortNames();
+
+			Console.WriteLine("Available Ports:");
+			foreach (string s in PortNames)
+			{
+				Console.WriteLine("   {0}", s);
+			}
+
 			Port = port;
 			DmxSize = dmxSize;
 			Baudrate = baudrate;
@@ -81,11 +89,17 @@ namespace DMXEnttecProSharp
 			Array.Clear(Channels, 0, Channels.Length);
 		}
 
+		/// <summary>
+		/// Sets all channels to 255.
+		/// </summary>
 		public void AllChannelsOn()
 		{
 			Array.Fill(Channels, (byte)255);
 		}
 
+		/// <summary>
+		/// Sets all channels to a specific value.
+		/// </summary>
 		public void SetAllChannels(byte value)
 		{
 			Array.Fill(Channels, value);
@@ -94,7 +108,6 @@ namespace DMXEnttecProSharp
 		public void Close()
 		{
 			_serialPort.Close();
-			_serialPort.Dispose();
 		}
 
 		public void Submit()

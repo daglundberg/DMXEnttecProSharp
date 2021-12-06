@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using DMXEnttecProSharp;
 
 namespace Experiments
@@ -14,7 +15,29 @@ namespace Experiments
 			controller.SetChannel(5, 55);
 			controller.Submit();
 
-			Console.WriteLine("Hello World!");
+			byte val = 0;
+			int count = 0;
+			while (count < 3)
+			{
+				if (val < 255)
+					val++;
+				else
+				{
+					val = 0;
+					count++;
+				}
+				controller.SetChannel(2, val);
+
+				controller.SetChannel(5, val);
+				controller.Submit();
+				Thread.Sleep(5);
+			}
+
+			controller.ClearChannels();
+			controller.Submit();
+			controller.Close();
+
+			Console.WriteLine("Press any key to exit...");
 			Console.ReadLine();
 		}
 	}
